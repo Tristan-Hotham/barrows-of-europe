@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Is the Barrow a European Thing?</title>
+<meta name="description" content="{{totals.europe|int}} burial mounds and cairns mapped across Europe from OpenStreetMap and Wikidata, with radiocarbon dates: where barrows are, who mapped them, and when they were built.">
+<meta property="og:title" content="Is the barrow a European thing? Mapping {{totals.europe|int}} burial mounds">
+<meta property="og:description" content="Long barrows, round barrows, tumuli, cairns and kurgans from Ireland to the steppe: density, coverage and radiocarbon dates.">
+<meta property="og:image" content="https://tristan-hotham.github.io/barrows-of-europe/header.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800;9..144,900&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* Oatmeal paper, earth-brown ink, ochre for the mounds. Type colours: five earth tones, checked for contrast on both themes. */
+:root{
+  --bg:#F3EDE0; --panel:#E9E0CC; --fg:#2E2216; --muted:#6B5D4A; --rule:#DACDB3; --card:#FBF7EE; --border:#C8B796;
+  --hot:#A35A17; --grass:#55702F; --sea:#E4E2DA;
+  --k-mound:#B5651D; --k-round:#D9A030; --k-long:#4E6E2A; --k-cairn:#5F7186; --k-kurgan:#8E2F22;
+  --r-0:#A35A17; --r-1:#3E6C8C; --r-2:#55702F; --r-3:#8E2F22;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1B1611; --panel:#241D16; --fg:#EEE5D6; --muted:#B0A28C; --rule:#3A3025; --card:#211A14; --border:#4C3F30;
+  --hot:#E0913F; --grass:#9DBA6A; --sea:#1F1F1E;
+  --k-mound:#E08A3C; --k-round:#F0C35A; --k-long:#93B95E; --k-cairn:#9DB1C8; --k-kurgan:#E0705C;
+  --r-0:#E0913F; --r-1:#7FB0D4; --r-2:#9DBA6A; --r-3:#E0705C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B1611; --panel:#241D16; --fg:#EEE5D6; --muted:#B0A28C; --rule:#3A3025; --card:#211A14; --border:#4C3F30;
+  --hot:#E0913F; --grass:#9DBA6A; --sea:#1F1F1E;
+  --k-mound:#E08A3C; --k-round:#F0C35A; --k-long:#93B95E; --k-cairn:#9DB1C8; --k-kurgan:#E0705C;
+  --r-0:#E0913F; --r-1:#7FB0D4; --r-2:#9DBA6A; --r-3:#E0705C; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 18px/1.62 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-x:hidden}
+.wrap{max-width:680px;margin:0 auto;padding-block:28px 64px}
+.wrap .bleed{width:min(1080px,calc(100vw - 32px));margin-left:calc((100% - min(1080px,100vw - 32px))/2);margin-right:0}
+a{color:inherit;text-decoration-color:var(--hot);text-underline-offset:3px}
+.kicker{font:500 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.kicker b{background:var(--hot);color:#fff;padding:5px 8px;font-weight:500}
+.kicker a{text-decoration:none}
+header.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;align-items:end;border-bottom:6px double var(--fg);padding-bottom:22px;margin-top:18px}
+h1{font:900 clamp(46px,11.5vw,96px)/.9 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance;font-variation-settings:"SOFT" 50}
+h1 em{font-style:normal;color:var(--hot)}
+.mark{width:clamp(96px,22vw,190px);height:auto;display:block}
+.dek{grid-column:1/-1;font-size:21px;line-height:1.42;margin:8px 0 0;max-width:46ch}
+.byline{font:400 13px/1.4 var(--mono);color:var(--muted);margin-top:14px}
+h2{font:800 34px/1.04 var(--display);letter-spacing:-.01em;margin:52px 0 10px;text-wrap:balance}
+h2 .n{font:500 13px/1 var(--mono);color:var(--hot);display:block;letter-spacing:.1em;margin-bottom:10px}
+h3{font:600 20px/1.25 var(--display);margin:28px 0 6px}
+p{margin:0 0 16px}
+.lede::first-letter{font:900 72px/.8 var(--display);float:left;margin:6px 10px 0 0;color:var(--hot)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:26px 0 8px}
+.stats div{background:var(--card);padding:14px 12px}
+.stats b{display:block;font:900 clamp(24px,5vw,34px)/1 var(--display);color:var(--fg);overflow-wrap:anywhere}
+.stats b.h{color:var(--hot)}
+.stats span{font:400 12px/1.35 var(--mono);color:var(--muted);display:block;margin-top:6px}
+@media (max-width:600px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.figure{margin:26px 0 30px}
+.fig-h{font:600 19px/1.25 var(--display);margin:0 0 4px}
+.fig-sub{font:400 13px/1.45 var(--mono);color:var(--muted);margin:0 0 12px}
+.src{font:400 12px/1.45 var(--mono);color:var(--muted);margin-top:10px}
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:var(--mono);fill:var(--fg)}
+.lab{font-size:12px}.lab.m{fill:var(--muted)}.lab.b{font-weight:500}.lab.s{font-size:11px}
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);font:400 12px/1.45 var(--mono);padding:8px 10px;border-radius:3px;max-width:290px;z-index:1000;transform:translate(-50%,calc(-100% - 12px));display:none}
+.tip b{font-weight:500}
+.tip i,.legend i,.card i,.sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.btn{font:500 12px/1 var(--mono);background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:8px 10px;cursor:pointer;min-height:36px}
+.btn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.k[aria-pressed="false"]{opacity:.55;text-decoration:line-through}
+.btn:focus-visible,select:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.seg .btn{border:0;border-radius:0;border-right:1px solid var(--border)}
+.seg .btn:last-child{border-right:0}
+select{font:500 12px/1 var(--mono);background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:8px 10px;min-height:36px;max-width:100%}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:820px){.mapgrid{grid-template-columns:1fr}}
+#map{height:clamp(440px,76vh,680px);border:1px solid var(--border);background:var(--sea);border-radius:2px;z-index:0}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;font:400 12px/1.3 var(--mono);color:var(--muted);margin-top:8px;align-items:center}
+.ramp{display:inline-block;width:120px;height:10px;vertical-align:-1px;margin:0 6px;border:1px solid var(--border)}
+.side{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--hot);padding:12px 14px;font:400 13px/1.5 var(--mono)}
+.card.empty{border-left-color:var(--border);color:var(--muted)}
+.card b.t{font:600 18px/1.2 var(--display);display:block;margin-bottom:6px}
+.bars{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:3px 8px;align-items:center;margin:8px 0}
+.bars span.bar{height:10px;border-radius:0 3px 3px 0;display:block}
+.pull{font:600 26px/1.25 var(--display);border-left:6px solid var(--hot);padding:4px 0 4px 18px;margin:30px 0}
+.note{background:var(--panel);border:1px solid var(--rule);padding:14px 16px;font-size:16px;margin:22px 0}
+.note h3{margin-top:0}
+table.t{width:100%;border-collapse:collapse;font:400 13px/1.35 var(--mono)}
+table.t th{text-align:left;font-weight:500;color:var(--muted);border-bottom:2px solid var(--fg);padding:6px 8px 6px 0;cursor:pointer;white-space:nowrap}
+table.t td{border-bottom:1px solid var(--rule);padding:7px 8px 7px 0;vertical-align:top}
+table.t td.num,table.t th.num{text-align:right}
+.tag{font:500 10px/1 var(--mono);border:1px solid var(--hot);color:var(--hot);padding:2px 4px;border-radius:2px;margin-left:6px;white-space:nowrap}
+.tablewrap{overflow-x:auto;max-height:520px;overflow-y:auto;border-bottom:1px solid var(--rule)}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.cta a{font:500 13px/1 var(--mono);text-decoration:none;border:1px solid var(--fg);padding:11px 14px;border-radius:3px}
+.cta a.p{background:var(--hot);border-color:var(--hot);color:#fff}
+ul.lim{padding-left:20px}ul.lim li{margin-bottom:10px}
+footer{border-top:6px double var(--fg);margin-top:56px;padding-top:16px;font:400 13px/1.55 var(--mono);color:var(--muted)}
+footer p{margin:0 0 10px}
+.theme{position:fixed;right:12px;bottom:12px;z-index:1001}
+.leaflet-container{font:400 12px/1.4 var(--mono);background:var(--sea)}
+.leaflet-control-attribution{background:color-mix(in srgb,var(--card) 85%,transparent)!important;color:var(--muted)!important;font-size:10px}
+.leaflet-control-attribution a{color:var(--fg)!important}
+.leaflet-bar a{background:var(--card);color:var(--fg);border-bottom-color:var(--border)}
+.leaflet-bar a:hover{background:var(--panel)}
+.leaflet-bar{border:1px solid var(--border)!important}
+@media print{.theme,.controls{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="kicker"><b>Data study</b><span>Prehistory × maps</span><span>Europe, 4000 BC to AD 1000</span><a href="https://blog.tristanhotham.com/">Blog home</a></div>
+<header class="hero">
+  <h1>Is the barrow a <em>European</em> thing?</h1>
+  <svg class="mark" viewBox="0 0 200 150" aria-hidden="true"><g id="heroMark"></g></svg>
+  <p class="dek">Long barrows in Wessex, round barrows on the Yorkshire Wolds, bronze-age cairns in Sweden, kurgans on the steppe. I mapped {{totals.europe|int}} burial mounds and burial cairns across Europe, and dated the tradition with radiocarbon. Is there a barrow belt across the north? Or just a belt of good records?</p>
+</header>
+<div class="byline">Dr Tristan Hotham, Independent researcher · October 2026 · Data: OpenStreetMap, Wikidata, p3k14c radiocarbon database, IntCal20, Natural Earth</div>
+
+<div class="stats">
+  <div><b class="h">{{totals.europe|int}}</b><span>barrows mapped in Europe, in {{totals.countries_with_any|int}} of {{totals.countries_europe|int}} countries</span></div>
+  <div><b>{{register_share|pct0}}</b><span>of them in eight countries whose heritage registers fed the data, {{register_land_share|pct0}} of the land</span></div>
+  <div><b>{{dates.name.All.bins.2500 to 800 BC|pct0}}</b><span>of dated barrows fall between 2500 and 800 BC, the Bronze Age</span></div>
+  <div><b class="h">{{x.long_median}}</b><span>median date of the long barrows, against {{x.other_median}} for other barrows</span></div>
+</div>
+
+<p class="lede">Walk the chalk downs of southern England and they are everywhere: grassy humps on the skyline, some long, most round, the burial places of people who farmed here four or five thousand years ago. Barrows feel very British. Barrow is an old English word for a hill or grave mound, and "low", "howe" and "tump" are on the map too. But the Danes have their høje, the Swedes their rösen, the Germans their Hügelgräber, the Dutch their grafheuvels, and across the plains of Ukraine and southern Russia stand the kurgans.</p>
+<p>So is the barrow a European thing? A north-west European thing? I pulled every burial mound and burial cairn I could find in OpenStreetMap and Wikidata, from Ireland to the Urals, {{totals.europe|int}} of them in Europe and {{totals.edge|int}} more in Turkey and the Caucasus, and linked radiocarbon dates to the barrows they came from. The answer is less tidy than the question, and more interesting: it depends what you count, and who did the counting.</p>
+<div class="pull">The map of Europe's barrows is, first of all, a map of Europe's heritage registers.</div>
+
+<h2><span class="n">01 · The map</span>A hundred thousand mounds</h2>
+<p>Every dot is one barrow, coloured by type. Filter by type, by period (where the record gives one), by country and by source, or switch to the density view: barrows per 1,000 km² in squares of 50 km. Tap a dot for its name and record.</p>
+<div class="figure bleed">
+  <div class="controls" id="kindbtns" role="group" aria-label="Barrow types"></div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="View"><button class="btn" data-view="dots" aria-pressed="true">Dots</button><button class="btn" data-view="density" aria-pressed="false">Density</button></div>
+    <select id="persel" aria-label="Period"></select>
+    <select id="ctysel" aria-label="Country"></select>
+    <select id="srcsel" aria-label="Source"><option value="-1">OpenStreetMap and Wikidata</option><option value="0">OpenStreetMap only</option><option value="1">Wikidata only</option></select>
+  </div>
+  <div class="mapgrid">
+    <div>
+      <div id="map" role="application" aria-label="Map of Europe with one dot for each mapped barrow, or a density grid"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="side">
+      <div class="card empty" id="card">Tap a dot to see the barrow's record, or a square in the density view for its count.</div>
+      <div class="card" id="tally"></div>
+      <div class="src" id="mapnote"></div>
+    </div>
+  </div>
+</div>
+<p>Look at the dots and the answer to the title seems obvious. The barrows crowd the north: {{north50.share_all|pct0}} of them lie north of 50° N, which holds {{north50.land_share|pct0}} of Europe's land, and {{belt.share_n|pct0}} sit between 50° and 60° N, a band with {{belt.share_land|pct0}} of the land. Denmark alone has {{c.Denmark.n|int}}, {{c.Denmark.per_1000km2|f0}} for every 1,000 km². The ten densest 50 km squares in Europe are all in Denmark and Sweden.</p>
+
+<h2><span class="n">02 · Who counted?</span>Eight registers and a lot of volunteers</h2>
+<p>Then look at where the records came from. In Sweden, {{c.Sweden.n_wikidata|int}} of the {{c.Sweden.n|int}} barrows are Wikidata items, {{provenance.sweden_unlabelled|pct0}} of them without even a name: items created in bulk from the national register of ancient monuments. In Denmark, OpenStreetMap holds {{c.Denmark.n_osm|int}}, and the {{denmark_double.items|int}} Danish barrows in Wikidata sit a median of {{denmark_double.median_m|f1}} m from an OpenStreetMap barrow ({{denmark_double.within_30m|pct0}} within 30 m), a sign that both were drawn from the same national list. Germany's Wikidata barrows are labelled with Bavarian monument numbers ({{provenance.germany_bavarian_label|pct0}} of them) and {{provenance.germany_in_bavaria_box|pct0}} lie in Bavaria; most of Spain's are in the Basque Country ({{provenance.spain_in_basque_box|pct0}}); Britain's carry the long descriptive names of the scheduled monument lists ("Bowl barrow on Huggate Wold, 500m NNW of Horsedale Plantation"); Finland, the Netherlands and Slovenia have their own sets.</p>
+<p>I call a country "register-fed" where Wikidata holds at least 250 barrows and at least one per 1,000 km²: elsewhere Wikidata has almost none. Eight European countries pass: {{x.register_list}}. They cover {{register_land_share|pct0}} of Europe's land and hold {{register_share|pct0}} of its mapped barrows, {{regfed.per_1000km2|f0}} per 1,000 km². Everywhere else the figure is {{nonregister.per_1000km2|f1}}: what volunteers have mapped by hand in OpenStreetMap.</p>
+<div class="figure">
+  <div class="fig-h">Barrows per 1,000 km² of land, by country</div>
+  <div class="fig-sub">Countries with at least 30 mapped barrows. Log scale: each gridline is ten times the last. The bar is split into OpenStreetMap and Wikidata. Filled tag = register-fed.</div>
+  <div class="chart" id="ctry"></div>
+  <div class="src">Land area from Natural Earth (1:10m), clipped at 60° E. Wikidata items within 30 m of an OpenStreetMap barrow, or linked to one, are counted once, as OpenStreetMap.</div>
+</div>
+<p>Take the register-fed countries out and the northern tilt goes. In the other {{x.n_nonreg_countries}} countries, {{north50.share_nonregister|pct0}} of the barrows lie north of 50° N, on {{north50.land_share_nonregister|pct0}} of their land: if anything a southern lean, because Russia's vast and thinly mapped north weighs heavily. The densest band outside the registers is not the North Sea coast but central Europe, around 47° to 50° N: Austria, Hungary, Czechia, southern Poland, Bavaria's neighbours.</p>
+<div class="figure">
+  <div class="controls"><div class="seg" role="group" aria-label="Measure"><button class="btn" data-lat="density" aria-pressed="true">Barrows per 1,000 km²</button><button class="btn" data-lat="presence" aria-pressed="false">Squares with a barrow</button></div></div>
+  <div class="fig-h">Barrows by latitude</div>
+  <div class="fig-sub">One-degree bands across Europe. Ochre: all records. Blue: only countries without a register in the data. Presence = share of 50 km squares (with at least 250 km² of land) holding at least one barrow.</div>
+  <div class="chart" id="lat"></div>
+</div>
+<p>Presence is a fairer test than density, because one barrow is enough to mark a square. Across Europe, {{cells.presence|pct0}} of 50 km squares hold at least one mapped barrow. In the register-free countries, {{belt.presence_south_nonregister|pct0}} of squares south of 50° N have one, {{belt.presence_band_nonregister|pct0}} between 50° and 60° N, and {{belt.presence_north_nonregister|pct0}} north of 60° N. Burial mounds were built almost everywhere people farmed. What varies most is how thoroughly they have been written down.</p>
+
+<h2><span class="n">03 · Earth or stone</span>The mound lands and the stone coast</h2>
+<p>There is a measure that does not care how hard each country's mappers worked. In the same OpenStreetMap pull I also have every mapped megalith: dolmens, passage graves, menhirs, stone circles. For each country I can ask what share of its mapped prehistoric monuments are mounds rather than stones. A keen mapper adds both, so the share cancels much of the effort.</p>
+<div class="figure">
+  <div class="fig-h">Mounds as a share of mapped mounds and megaliths</div>
+  <div class="fig-sub">OpenStreetMap only, countries with at least 50 records of either kind. Each dot is a country; hover or tap for the counts. Nuraghi (Sardinian towers) are left out.</div>
+  <div class="chart" id="stone"></div>
+  <div class="src">Megaliths: OpenStreetMap objects tagged archaeological_site=megalith that are not also barrows. Mounds over megalithic chambers are counted as mounds when they are tagged as tumuli.</div>
+</div>
+<p>Here a clear pattern appears. Along the Atlantic edge, prehistoric monuments are mostly stone: mounds are {{c.France.mound_share_osm|pct0}} of the mapped total in France, {{c.Portugal.mound_share_osm|pct0}} in Portugal, {{c.Ireland.mound_share_osm|pct0}} in Ireland and {{c.Italy.mound_share_osm|pct0}} in Italy. Across the North European Plain and east to the Black Sea, they are almost all earth: {{c.Netherlands.mound_share_osm|pct0}} in the Netherlands, {{c.Poland.mound_share_osm|pct0}} in Poland, {{c.Austria.mound_share_osm|pct0}} in Austria, {{c.Hungary.mound_share_osm|pct0}} in Hungary, {{c.Ukraine.mound_share_osm|pct0}} in Ukraine. Britain ({{c.United Kingdom.mound_share_osm|pct0}}) and Sweden ({{c.Sweden.mound_share_osm|pct0}}) sit in between, with both. So if there is a "barrow Europe", it is not the north-west fringe; it is the great lowland belt from the North Sea to the steppe, with the megalith builders of the Atlantic coast on its western flank.</p>
+
+<h2><span class="n">04 · What kind?</span>Long, round, cairn, kurgan</h2>
+<p>Most records just say tumulus: {{kinds.mound.share|pct0}} are mounds of no stated type. The named types tell their own story about who records what. Round barrows ({{kinds.round.n|int}}) are almost all British, because Historic England names its bowl, bell and disc barrows. Burial cairns ({{kinds.cairn.n|int}}) belong to the stony north and west: Sweden ({{c.Sweden.n_cairn|int}}), Britain ({{c.United Kingdom.n_cairn|int}}), Finland ({{c.Finland.n_cairn|int}}). Long barrows and long cairns are rare in the data ({{kinds.long.n|int}}), and are British, Danish and German. Kurgans, by name, number {{kinds.kurgan.n|int}}, and {{kurgan_lon_east_of_20_share|pct0}} lie east of 20° E.</p>
+<div class="figure">
+  <div class="fig-h">Types of barrow, by country</div>
+  <div class="fig-sub">Share of each country's mapped barrows by type (from tags, Wikidata class and name). Countries with at least 300 barrows.</div>
+  <div class="chart" id="kinds"></div>
+</div>
+
+<h2><span class="n">05 · The steppe</span>The other heartland, almost unmapped</h2>
+<p>The Pontic and Caspian steppe should be the great exception: this is where the Yamnaya and their successors raised kurgans over their dead from the late fourth millennium BC, often in groups. In a box from 28° to 50° E and 44° to 52° N, I find {{steppe.n|int}} mapped barrows, {{steppe.per_1000km2|f1}} per 1,000 km², with at least one in {{steppe.presence|pct0}} of the 50 km squares. {{steppe.osm_share|pct1}} come from OpenStreetMap; Wikidata has almost none for Russia or Ukraine. {{steppe.kurgan_named|int}} are named kurgans or mogilas, and {{steppe.group_records|int}} are single records for a whole group or cemetery of mounds.</p>
+<p>That last number matters. A Russian mapper writing "Kurgan group 1 near the village" adds one point for what may be dozens of mounds, while a Danish register adds every mound. The data cannot tell us whether the steppe is the other heartland of the barrow. It can tell us that the steppe has nothing like a national register in OpenStreetMap or Wikidata, and that any count of Europe's barrows that leaves this out is a count of records, not of mounds.</p>
+
+<h2><span class="n">06 · When?</span>A Bronze Age habit, with Neolithic roots</h2>
+<p>To date the tradition I used the p3k14c database of radiocarbon dates, which holds {{dates.meta.n_europe_dates|int}} dates in Europe. I kept the dates whose site name says barrow, tumulus, cairn, kurgan, høj, hög, Grabhügel or one of their cousins, and calibrated them with IntCal20: {{dates.meta.n_dates_name|int}} dates from {{dates.meta.n_sites_name|int}} sites. To stop one heavily sampled site from drowning the rest, each site's dates share a weight of one.</p>
+<div class="figure">
+  <div class="controls"><div class="seg" role="group" aria-label="Which dates"><button class="btn" data-set="name" aria-pressed="true">Named barrows ({{dates.meta.n_sites_name|int}} sites)</button><button class="btn" data-set="wide" aria-pressed="false">Named or within 100 m ({{dates.meta.n_sites_wide|int}} sites)</button></div></div>
+  <div class="fig-h">Radiocarbon dates from barrows, by region</div>
+  <div class="fig-sub">Curves: summed calibrated probability, each site weighted equally, scaled to each region's peak. Ticks: the median calibrated date of each sample. Hover or tap a tick for the site.</div>
+  <div class="chart" id="time"></div>
+  <div class="src">Calibration: IntCal20. Shaded bands mark rough period boundaries used in the text, not regional chronologies.</div>
+</div>
+<p>The dates fall in two waves. The first is Neolithic: {{dates.name.All.bins.before 2500 BC|pct0}} of the site-weighted dates are older than 2500 BC, and in Britain and Ireland the summed curve has a first peak around {{x.bi_neo_peak}}, the age of the long barrows. The dates from barrows named as long barrows or long cairns have a median of {{x.long_median}}, and {{dates.long_named.share_before_2500|pct0}} are older than 2500 BC. The second wave is bigger: {{dates.name.All.bins.2500 to 800 BC|pct0}} of the dates fall between 2500 and 800 BC, with Britain's peak near {{x.bi_later_peak}}, the age of the round barrows. Only {{x.after_800bc|pct0}} are later than 800 BC.</p>
+<div class="figure">
+  <div class="fig-h">Share of barrow dates in each period</div>
+  <div class="fig-sub">Site-weighted share of calibrated median dates. Follows the choice above the timeline.</div>
+  <div class="chart" id="bins"></div>
+</div>
+<p>The wider set, adding {{x.near_sites}} more sites whose dates were taken within 100 m of a mapped barrow, tells the same story: {{dates.wide.All.bins.before 2500 BC|pct0}} before 2500 BC and {{dates.wide.All.bins.2500 to 800 BC|pct0}} between 2500 and 800 BC. The radiocarbon record is overwhelmingly British and Scandinavian, though: {{dates.name.Britain and Ireland.sites|int}} and {{dates.name.Scandinavia.sites|int}} named sites, against {{dates.name.East Europe and the steppe.sites|int}} in eastern Europe and the steppe. And it is blind to later mounds. Iron Age and Viking barrows are usually dated by what was buried in them, a brooch or a sword, so they are not here in proportion. Where the map records give a period ({{periods.share_tagged|pct0}} of them), the Bronze Age leads with {{periods.specific_shares.bronze|pct0}} of those with a specific period, then the Iron Age with {{periods.specific_shares.iron|pct0}}, the Neolithic {{periods.specific_shares.neolithic|pct0}} and early medieval or Viking mounds {{periods.specific_shares.medieval|pct0}}; most of those periods come from Finland's register, which dates its cairns to the Bronze and Iron Ages.</p>
+
+<h2><span class="n">07 · So?</span>Is the barrow a European thing?</h2>
+<p>Mound burial is a European thing in the plain sense: there are mapped barrows in {{totals.countries_with_any|int}} of {{totals.countries_europe|int}} European countries, from Ireland to the Urals, and the dated ones cluster in the Neolithic and above all the Bronze Age. It is not only European, of course: the same Wikidata classes hold {{wikidata_world.kofun|int}} Japanese kofun, and burial mounds were raised in Asia and the Americas too. But {{wikidata_world.share_in_box|pct0}} of the Wikidata barrows with coordinates lie in my European box, which says more about who builds Wikidata than about who built mounds.</p>
+<p>Is it a north-west European thing? The raw map says yes, emphatically. The sources say be careful: the barrow belt across Denmark, southern Sweden, the Netherlands, northern Germany and Britain is real on the ground, but its height on the map is the height of a few national registers. The pattern that survives every test is broader: an earthen mound tradition across the lowlands from the North Sea to the steppe, framed by stone tombs on the Atlantic coast, and a peak of building between about 2500 and 800 BC.</p>
+<div class="figure">
+  <div class="fig-h">Every country, every source</div>
+  <div class="fig-sub">Tap a column heading to sort. Register-fed countries are tagged; Turkey and the Caucasus are listed as neighbours, outside the European totals.</div>
+  <div class="tablewrap"><table class="t" id="ctab"></table></div>
+</div>
+
+<h2><span class="n">08 · Limits</span>What this can and cannot say</h2>
+<ul class="lim">
+<li><b>Records, not mounds.</b> These are the barrows that someone has put into OpenStreetMap or Wikidata. Ploughed-out mounds, unrecorded ones and most of the steppe's kurgans are missing. Compare shares and patterns within the data, not raw totals between countries.</li>
+<li><b>Registers make the map.</b> {{register_share|pct0}} of the records come from eight countries with bulk imports from heritage registers. Germany's Wikidata barrows are almost all from Bavaria's monument list. I report these countries separately wherever I can.</li>
+<li><b>One point, many mounds.</b> {{totals.group_records|int}} records name a group or cemetery rather than one mound, most of them in Russia and Britain. They undercount.</li>
+<li><b>Types are what the record says.</b> A Danish "høj" may be a Bronze Age mound over a Neolithic grave. I classify by tags, Wikidata class and name, so "round barrow" is mostly a British label and "kurgan" an eastern one.</li>
+<li><b>Dates are from barrow sites, not of barrow building.</b> A date from a barrow may come from a buried body, a later burial dug into the mound, or charcoal from before it was raised. Linking is by site name (and, in the wider set, by distance), and the dated sites are mostly British and Scandinavian. Later mounds are under-dated by radiocarbon.</li>
+<li><b>Positions are approximate.</b> OpenStreetMap areas are placed at the first point of their outline, not the centre: fine at map scale.</li>
+</ul>
+
+<div class="note" id="method">
+  <h3>How I did this</h3>
+  <p><b>Barrows.</b> From a pull of {{x.osm_pull|int}} OpenStreetMap objects in a Europe box (25° W to 60° E, 34° to 72° N; QLever, 27 October 2026), I kept those tagged archaeological_site=tumulus or cairn, tomb=tumulus, or megalith_type long_barrow, round_barrow, barrow, chambered_cairn, ring_cairn or cairn: {{build.n_osm_raw|int}} objects, {{build.n_osm|int}} after dropping {{build.n_osm_near_dupes|int}} within 5 m of another (node and outline of one mound). From Wikidata I took every item of class tumulus (and its subclasses, such as bowl barrow) or cairn (except clearance cairns) with coordinates in the box: {{build.n_wd_raw|int}}. I dropped {{build.n_wd_dup_qid|int}} that an OpenStreetMap barrow already links and {{build.n_wd_dup_near|int}} within 30 m of one, leaving {{build.n_wd_kept|int}}.</p>
+  <p><b>Countries and squares.</b> Each barrow is placed in a Natural Earth country (or the nearest within 10 km). Europe is Natural Earth's European countries clipped at 60° E, so Russia up to the Urals; Turkey, Cyprus, Georgia, Armenia, Azerbaijan and Kazakhstan west of 60° E are shown as neighbours. Densities use land area in an equal-area projection (ETRS89 Lambert azimuthal, EPSG:3035), and 50 km squares on the same grid; squares with less than 250 km² of land are left out of the rankings.</p>
+  <p><b>Types and periods.</b> Type comes first from the record's tags and Wikidata class, then from words in its name (long barrow, Hünenbett, langdysse; kurgan, курган, mogila; cairn, röse; bowl barrow and so on). Period comes from OpenStreetMap's historic:period and historic:civilization tags and Wikidata's period and culture, mapped to six broad bins.</p>
+  <p><b>Dates.</b> From p3k14c (Bird and others, 2022), the dates whose site name contains a barrow word, after removing burnt mounds, towns and streets called Barrow, cairnfields, dolmens, samples described as under or next to a barrow, and eight names that are not barrows. Dates with errors above 300 years and marine shell were dropped. Each date was calibrated against IntCal20 on a one-year grid (lab and curve errors added in quadrature). Every linked date, and the rule that linked it, is in <code>barrow_dates.csv</code>.</p>
+</div>
+<div class="cta">
+  <a class="p" href="https://github.com/Tristan-Hotham/barrows-of-europe">Data and code</a>
+  <a href="https://doi.org/10.5281/zenodo.23685258">Paper (Zenodo)</a>
+  <a href="https://tristan-hotham.github.io/megalith-highway/">Companion: The Megalith Highway</a>
+  <a href="https://tristan-hotham.github.io/stone-circles/">Companion: Stone circles</a>
+  <a href="https://blog.tristanhotham.com/2026/10/27/barrows-of-europe/">Blog post</a>
+  <a href="https://blog.tristanhotham.com/">Blog home</a>
+</div>
+
+<footer>
+  <p>Dr Tristan Hotham, researcher on social media, campaigns and politics. Independent researcher. Cite as: Hotham, T. (2026) Is the Barrow a European Thing? Mapping and dating Europe's burial mounds. Zenodo. <a href="https://doi.org/10.5281/zenodo.23685258">https://doi.org/10.5281/zenodo.23685258</a></p>
+  <p>Barrows: © OpenStreetMap contributors (ODbL 1.0) and Wikidata (CC0). Radiocarbon dates: p3k14c, Bird and others (2022), Scientific Data, CC BY 4.0. Calibration curve: IntCal20 (Reimer and others, 2020). Countries and land: Natural Earth (public domain). Base map tiles © Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community. Map library: Leaflet.</p>
+  <p>The derived barrow data are released under the Open Database Licence (ODbL 1.0), because they derive from OpenStreetMap. Text and figures are CC BY 4.0. Code is MIT.</p>
+  <p>I wrote the text, with drafting and editing assistance from Claude (Anthropic), which also helped prepare the analysis code. I reviewed and checked all text and results.</p>
+</footer>
+</div>
+<div class="tip" id="tip"></div>
+<button class="btn theme" id="theme" aria-label="Toggle dark mode">◐</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/*DATA*/
+let P = null;
+fetch("data/page.json").then(r => r.json()).then(p => { P = p; init(); }).catch(() => { document.getElementById("map").innerHTML = '<p style="padding:16px;font:400 13px/1.5 var(--mono)">The barrow data did not load. If you opened this file locally, serve the folder over http.</p>'; });
+const NS = "http://www.w3.org/2000/svg";
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const el = (t, a = {}, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const fmt = n => Math.round(n).toLocaleString("en-GB");
+const pc = (x, d = 0) => (x * 100).toFixed(d) + "%";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const yr = y => y <= 0 ? (1 - y) + " BC" : "AD " + y;
+const tip = document.getElementById("tip");
+function showTip(h, x, y) { tip.innerHTML = h; tip.style.display = "block"; const w = tip.offsetWidth; x = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, x)); tip.style.left = x + scrollX + "px"; tip.style.top = y + scrollY + "px"; }
+function hideTip() { tip.style.display = "none"; }
+function hover(node, h) { node.style.cursor = "pointer"; node.setAttribute("tabindex", "0"); const s = () => { const r = node.getBoundingClientRect(); showTip(typeof h === "function" ? h() : h, r.left + r.width / 2, r.top); }; node.addEventListener("pointerenter", s); node.addEventListener("focus", s); node.addEventListener("pointerleave", hideTip); node.addEventListener("blur", hideTip); node.addEventListener("click", e => { e.stopPropagation(); s(); }); }
+document.addEventListener("click", hideTip);
+const redraws = [];
+function resp(box, render) { let last = 0; const go = (force) => { const w = Math.max(280, Math.round(box.clientWidth)); if (!force && Math.abs(w - last) < 4) return; last = w; box.innerHTML = ""; render(w, w < 560); }; new ResizeObserver(() => go()).observe(box); redraws.push(() => go(true)); go(); }
+const lbl = (svg, x, y, s, cls = "lab", anchor = "start") => { const t = el("text", { x, y, class: cls, "text-anchor": anchor }, svg); t.textContent = s; return t; };
+const isDark = () => { const r = document.documentElement; return r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
+const KC = k => css("--k-" + k);
+const sw = c => `<i style="background:${c}"></i>`;
+
+/* hero mark: a long barrow and a round barrow in section, with turf and strata */
+function hero() { const g = document.getElementById("heroMark"); g.innerHTML = "";
+  el("line", { x1: 4, x2: 196, y1: 120, y2: 120, stroke: "var(--fg)", "stroke-width": 3 }, g);
+  const mound = (cx, w, h, col) => { [1, .72, .46].forEach((s, i) => el("path", { d: `M${cx - w * s} 120 Q${cx} ${120 - 2 * h * s} ${cx + w * s} 120 Z`, fill: col, opacity: [1, .75, .55][i] }, g)); };
+  mound(132, 58, 52, "var(--k-mound)"); mound(52, 46, 24, "var(--k-long)");
+  el("path", { d: "M74 120 Q132 16 190 120", fill: "none", stroke: "var(--fg)", "stroke-width": 2.5 }, g);
+  for (let i = 0; i < 9; i++) el("line", { x1: 8 + i * 22, x2: 14 + i * 22, y1: 132, y2: 132, stroke: "var(--muted)", "stroke-width": 2 }, g);
+  el("rect", { x: 124, y: 98, width: 16, height: 10, rx: 2, fill: "var(--bg)", stroke: "var(--fg)", "stroke-width": 1.5 }, g); }
+hero(); redraws.push(hero);
+
+function init() {
+const KINDS = R.kind_order, KL = R.kind_label;
+document.getElementById("theme").onclick = () => { const r = document.documentElement; r.dataset.theme = isDark() ? "light" : "dark"; redraws.forEach(f => f()); window.__restyle && window.__restyle(); };
+const N = P.lat.length;
+const on = KINDS.map(() => true); let per = "all", cty = -1, src = -1, view = "dots";
+const listeners = [];
+const PER_LABEL = { neolithic: "Neolithic or Copper Age", bronze: "Bronze Age", iron: "Iron Age", roman: "Roman", medieval: "Early medieval or Viking", prehistoric: "Prehistoric, unspecified", other: "Other", "": "No period given" };
+function pass(i) { if (!on[P.k[i]]) return false; if (src >= 0 && P.s[i] !== src) return false; if (cty >= 0 && P.c[i] !== cty) return false;
+  if (per === "all") return true; const p = P.periods[P.p[i]]; if (per === "any") return p !== "" && p !== "other"; return p === per; }
+
+/* controls */
+(() => { const box = document.getElementById("kindbtns");
+  KINDS.forEach((k, i) => { const b = document.createElement("button"); b.className = "btn k"; b.setAttribute("aria-pressed", "true"); b.innerHTML = `<span class="sw" style="background:var(--k-${k})"></span>${KL[k]} (${fmt(P.k.filter(x => x === i).length)})`;
+    b.onclick = () => { on[i] = !on[i]; b.setAttribute("aria-pressed", on[i]); listeners.forEach(f => f()); }; box.appendChild(b); });
+  const ps = document.getElementById("persel"); ps.innerHTML = `<option value="all">Any or no period</option><option value="any">Only with a period</option>` + R.periods.order.map(p => `<option value="${p}">${PER_LABEL[p]} (${fmt(R.periods.counts[p])})</option>`).join("");
+  ps.onchange = () => { per = ps.value; listeners.forEach(f => f()); };
+  const cs = document.getElementById("ctysel"); const cn = {}; for (let i = 0; i < N; i++) cn[P.c[i]] = (cn[P.c[i]] || 0) + 1;
+  cs.innerHTML = `<option value="-1">All countries</option>` + P.cnames.map((n, i) => [n, i]).sort((a, b) => a[0].localeCompare(b[0])).map(([n, i]) => `<option value="${i}">${esc(n)} (${fmt(cn[i] || 0)})</option>`).join("");
+  cs.onchange = () => { cty = +cs.value; listeners.forEach(f => f()); if (window.__map && cty >= 0) { let a = 90, b = -90, c = 180, d = -180; for (let i = 0; i < N; i++) if (P.c[i] === cty) { const la = P.lat[i] / 1e4, lo = P.lon[i] / 1e4; a = Math.min(a, la); b = Math.max(b, la); c = Math.min(c, lo); d = Math.max(d, lo); } if (b > a) window.__map.fitBounds([[a, c], [b, d]], { maxZoom: 8, padding: [20, 20] }); } };
+  document.getElementById("srcsel").onchange = e => { src = +e.target.value; listeners.forEach(f => f()); };
+  document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => { view = b.dataset.view; document.querySelectorAll("[data-view]").forEach(x => x.setAttribute("aria-pressed", x === b)); listeners.forEach(f => f()); });
+})();
+
+/* ===== map: dots and density drawn on canvas tiles ===== */
+(() => {
+  const card = document.getElementById("card"), note = document.getElementById("mapnote"), tally = document.getElementById("tally"), legend = document.getElementById("legend");
+  // world pixel coords at zoom 0 (256 px)
+  const MX = new Float32Array(N), MY = new Float32Array(N);
+  const merc = (la, lo) => { const s = Math.sin(la * Math.PI / 180); return [(lo + 180) / 360 * 256, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 256]; };
+  for (let i = 0; i < N; i++) { const [x, y] = merc(P.lat[i] / 1e4, P.lon[i] / 1e4); MX[i] = x; MY[i] = y; }
+  const CELLS = P.cells.c.map(s => s.split(";").map(p => { const [lo, la] = p.split(",").map(Number); return merc(la, lo); }));
+  let cellN = new Float32Array(CELLS.length);
+  function counts() { cellN.fill(0); let n = 0; const byK = KINDS.map(() => 0);
+    for (let i = 0; i < N; i++) { if (!pass(i)) continue; n++; byK[P.k[i]]++; if (P.ci[i] >= 0) cellN[P.ci[i]]++; } return { n, byK }; }
+  const ramp = ["#F6E7C8", "#EBC98B", "#D9A050", "#B9732A", "#8C4A17", "#5A2A0C"];
+  const rampD = ["#3A2E22", "#5C4425", "#87602C", "#B98238", "#E0A851", "#F7D58C"];
+  const breaks = [0.5, 2, 5, 15, 50, 200];
+  const dcol = d => { const r = isDark() ? rampD : ramp; let k = 0; while (k < breaks.length - 1 && d >= breaks[k + 1]) k++; return r[k]; };
+  if (!window.L) { document.getElementById("map").innerHTML = '<p style="padding:16px;font:400 13px/1.5 var(--mono)">The map library did not load. The charts below still work.</p>'; return; }
+  const map = L.map("map", { scrollWheelZoom: false, zoomSnap: 1, minZoom: 3, maxZoom: 13, worldCopyJump: false }).fitBounds([[36, -10], [66, 45]]);
+  map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+  map.on("focus", () => map.scrollWheelZoom.enable()); map.on("blur", () => map.scrollWheelZoom.disable());
+  const tileUrl = () => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark() ? "World_Dark_Gray_Base" : "World_Light_Gray_Base"}/MapServer/tile/{z}/{y}/{x}`;
+  const tiles = L.tileLayer(tileUrl(), { maxZoom: 16, attribution: "Tiles &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS user community · Barrows &copy; OpenStreetMap contributors (ODbL), Wikidata (CC0)" }).addTo(map);
+  let sel = -1;
+  const Dots = L.GridLayer.extend({ createTile(c) {
+    const t = document.createElement("canvas"), sz = this.getTileSize(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    t.width = sz.x * dpr; t.height = sz.y * dpr; t.style.width = sz.x + "px"; t.style.height = sz.y + "px";
+    const g = t.getContext("2d"); g.scale(dpr, dpr); const s = Math.pow(2, c.z), ox = c.x * 256, oy = c.y * 256;
+    if (view === "density") {
+      g.globalAlpha = .82; g.strokeStyle = isDark() ? "rgba(0,0,0,.25)" : "rgba(255,255,255,.35)"; g.lineWidth = .5;
+      for (let j = 0; j < CELLS.length; j++) { if (!cellN[j]) continue; const q = CELLS[j]; let mnx = 1e9, mxx = -1e9, mny = 1e9, mxy = -1e9;
+        for (const [x, y] of q) { const px = x * s - ox, py = y * s - oy; mnx = Math.min(mnx, px); mxx = Math.max(mxx, px); mny = Math.min(mny, py); mxy = Math.max(mxy, py); }
+        if (mxx < 0 || mnx > 256 || mxy < 0 || mny > 256) continue;
+        g.fillStyle = dcol(cellN[j] / Math.max(1, P.cells.land[j]) * 1000); g.beginPath(); q.forEach(([x, y], k) => { const px = x * s - ox, py = y * s - oy; k ? g.lineTo(px, py) : g.moveTo(px, py); }); g.closePath(); g.fill(); g.stroke(); }
+      return t; }
+    const r = c.z <= 4 ? 1.3 : c.z === 5 ? 1.7 : c.z === 6 ? 2.2 : c.z <= 8 ? 3 : 4.2; const pad = r + 1;
+    g.globalAlpha = c.z <= 5 ? .7 : .85; const cols = KINDS.map(KC); const edge = isDark() ? "rgba(0,0,0,.6)" : "rgba(255,255,255,.8)";
+    for (let i = 0; i < N; i++) { const px = MX[i] * s - ox; if (px < -pad || px > 256 + pad) continue; const py = MY[i] * s - oy; if (py < -pad || py > 256 + pad) continue; if (!pass(i)) continue;
+      g.fillStyle = cols[P.k[i]]; g.beginPath(); g.arc(px, py, r, 0, 6.2832); g.fill(); if (c.z >= 7) { g.strokeStyle = edge; g.lineWidth = .7; g.stroke(); } }
+    if (sel >= 0) { const px = MX[sel] * s - ox, py = MY[sel] * s - oy; if (px > -12 && px < 268 && py > -12 && py < 268) { g.globalAlpha = 1; g.strokeStyle = css("--fg"); g.lineWidth = 2; g.beginPath(); g.arc(px, py, r + 4, 0, 6.2832); g.stroke(); } }
+    return t; } });
+  const layer = new Dots({ tileSize: 256, updateWhenZooming: false, keepBuffer: 2 }).addTo(map);
+  function drawLegend() {
+    if (view === "density") { const r = isDark() ? rampD : ramp; legend.innerHTML = `<span>Barrows per 1,000 km² in 50 km squares:</span>` + breaks.map((b, k) => `<span>${sw(r[k])}${k === breaks.length - 1 ? b + "+" : b + " to " + breaks[k + 1]}</span>`).join(""); }
+    else legend.innerHTML = KINDS.map(k => `<span>${sw("var(--k-" + k + ")")}${KL[k]}</span>`).join(""); }
+  function refresh() { const c = counts(); layer.redraw(); drawLegend();
+    tally.innerHTML = `<b class="t">${fmt(c.n)} barrows</b><div class="bars">${KINDS.map((k, i) => `<span>${KL[k]}</span><span class="bar" style="width:${Math.max(1, c.byK[i] / Math.max(1, ...c.byK) * 100)}%;background:var(--k-${k})"></span><span>${fmt(c.byK[i])}</span>`).join("")}</div>`;
+    note.textContent = view === "density" ? "Density view: squares of 50 km on an equal-area grid, shaded by barrows per 1,000 km² of land for the filters chosen. Empty squares are not drawn." : "Dots are drawn on the map in tiles; zoom in to separate them. OpenStreetMap areas are placed at the first point of their outline."; }
+  function showRec(i) { const k = KINDS[P.k[i]], p = P.periods[P.p[i]], id = P.id[i];
+    const link = P.s[i] === 0 ? `https://www.openstreetmap.org/${{ n: "node", w: "way", r: "relation" }[id[0]]}/${id.slice(1)}` : `https://www.wikidata.org/wiki/${id}`;
+    card.className = "card"; card.style.borderLeftColor = KC(k);
+    card.innerHTML = `<b class="t">${esc(P.nm[i] || "Unnamed barrow")}</b><div>${sw(KC(k))}${KL[k]}${P.g[i] ? " · group or cemetery" : ""}</div><div style="color:var(--muted)">${esc(P.cnames[P.c[i]])} · ${(P.lat[i] / 1e4).toFixed(3)}, ${(P.lon[i] / 1e4).toFixed(3)}</div><div>Period: ${PER_LABEL[p] || p}</div><div style="margin-top:6px"><a href="${link}" target="_blank" rel="noopener">${P.s[i] === 0 ? "OpenStreetMap record" : "Wikidata item " + id}</a></div>`; }
+  map.on("click", e => { const z = map.getZoom(), s = Math.pow(2, z), pt = map.project(e.latlng, z);
+    if (view === "density") { let best = -1; const x = pt.x / s, y = pt.y / s;
+      for (let j = 0; j < CELLS.length; j++) { const q = CELLS[j]; let inside = false; for (let a = 0, b = 3; a < 4; b = a++) { const [xa, ya] = q[a], [xb, yb] = q[b]; if ((ya > y) !== (yb > y) && x < (xb - xa) * (y - ya) / (yb - ya) + xa) inside = !inside; } if (inside) { best = j; break; } }
+      if (best < 0) { card.className = "card empty"; card.textContent = "No square here."; return; }
+      card.className = "card"; card.style.borderLeftColor = ""; const d = cellN[best] / Math.max(1, P.cells.land[best]) * 1000;
+      card.innerHTML = `<b class="t">${fmt(cellN[best])} barrows</b><div>in a 50 km square with ${fmt(P.cells.land[best])} km² of land, mostly in ${esc(P.cnames[P.isos.indexOf(P.cells.iso[best])] || P.cells.iso[best])}</div><div style="margin-top:6px">${d.toFixed(1)} per 1,000 km² for the filters chosen.</div>`; return; }
+    let best = -1, bd = 100; for (let i = 0; i < N; i++) { const dx = MX[i] * s - pt.x; if (dx > 10 || dx < -10) continue; const dy = MY[i] * s - pt.y; if (dy > 10 || dy < -10) continue; if (!pass(i)) continue; const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = i; } }
+    sel = best; layer.redraw(); if (best >= 0) showRec(best); else { card.className = "card empty"; card.style.borderLeftColor = ""; card.textContent = "No barrow under that tap. Zoom in and try again."; } });
+  listeners.push(refresh);
+  window.__restyle = () => { tiles.setUrl(tileUrl()); refresh(); };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", window.__restyle);
+  window.__map = map; refresh();
+})();
+window.__retime && window.__retime();
+}
+
+/* ===== country density bars (log) ===== */
+resp(document.getElementById("ctry"), (W, nar) => {
+  const rows = R.countries.filter(c => c.zone === "europe" && c.n >= 30), rowH = 24, m = { l: nar ? 104 : 136, r: nar ? 56 : 120, t: 22, b: 6 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Barrows per 1,000 square kilometres by country, log scale" }, document.getElementById("ctry"));
+  const lo = Math.log10(0.1), hi = Math.log10(1000), X = v => m.l + (Math.log10(Math.max(0.1, v)) - lo) / (hi - lo) * (W - m.l - m.r);
+  [0.1, 1, 10, 100, 1000].forEach(v => { el("line", { x1: X(v), x2: X(v), y1: m.t - 4, y2: H - m.b, stroke: "var(--rule)" }, svg); lbl(svg, X(v), m.t - 8, v >= 1 ? fmt(v) : v, "lab m s", "middle"); });
+  rows.forEach((r, i) => { const y = m.t + i * rowH;
+    lbl(svg, m.l - 8, y + 16, r.country.replace("United Kingdom", "UK").replace("Bosnia and Herzegovina", "Bosnia"), "lab s", "end");
+    const tot = r.per_1000km2, x1 = X(tot), x0 = X(0.1), fo = r.n ? r.n_osm / r.n : 0;
+    const g = el("g", {}, svg);
+    el("rect", { x: x0, y: y + 5, width: Math.max(1, (x1 - x0) * fo), height: rowH - 10, fill: "var(--k-mound)" }, g);
+    el("rect", { x: x0 + (x1 - x0) * fo, y: y + 5, width: Math.max(0, (x1 - x0) * (1 - fo)), height: rowH - 10, fill: "var(--r-1)" }, g);
+    lbl(svg, x1 + 6, y + 16, (tot >= 10 ? fmt(tot) : tot.toFixed(1)) + (nar ? "" : "  (" + fmt(r.n) + ")"), "lab s");
+    if (r.register_fed) { const t = el("text", { x: W - 4, y: y + 16, class: "lab s b", "text-anchor": "end", style: "fill:var(--hot)" }, svg); t.textContent = nar ? "R" : "register-fed"; }
+    hover(g, `<b>${r.country}</b><br>${fmt(r.n)} barrows, ${tot.toFixed(1)} per 1,000 km²<br>${sw("var(--k-mound)")}OpenStreetMap ${fmt(r.n_osm)}<br>${sw("var(--r-1)")}Wikidata ${fmt(r.n_wikidata)} (${fmt(r.n_wikidata_before_dedupe)} before removing duplicates)<br>Squares with a barrow: ${r.presence_share != null ? pc(r.presence_share) : "n/a"}`); });
+  const lg = el("g", {}, svg); lbl(svg, m.l, 10, "", "lab s m");
+  const d = document.createElement("div"); d.className = "legend"; d.innerHTML = `<span>${sw("var(--k-mound)")}OpenStreetMap</span><span>${sw("var(--r-1)")}Wikidata</span>${nar ? "<span>R = register-fed</span>" : ""}`; document.getElementById("ctry").appendChild(d);
+});
+
+/* ===== latitude profile ===== */
+(() => { let mode = "density"; const box = document.getElementById("lat");
+  document.querySelectorAll("[data-lat]").forEach(b => b.onclick = () => { mode = b.dataset.lat; document.querySelectorAll("[data-lat]").forEach(x => x.setAttribute("aria-pressed", x === b)); box.innerHTML = ""; render(box.clientWidth, box.clientWidth < 560); });
+  resp(box, (W, nar) => render(W, nar));
+  function render(W, nar) {
+    const rows = R.latitude.filter(r => r.lat >= 35 && r.lat <= 70), H = nar ? 300 : 340, m = { l: 46, r: nar ? 10 : 150, t: 12, b: 34 };
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Barrow density or presence by latitude" }, box);
+    const X = la => m.l + (la + .5 - 35) / 36 * (W - m.l - m.r);
+    const key = mode === "density" ? ["per_1000km2", "per_1000km2_nonregister"] : ["presence", "presence_nonregister"];
+    const logY = mode === "density", lo = -2, hi = 2;
+    const Y = v => logY ? H - m.b - (Math.log10(Math.max(0.01, v)) - lo) / (hi - lo) * (H - m.t - m.b) : H - m.b - v / .6 * (H - m.t - m.b);
+    const ticks = logY ? [0.01, 0.1, 1, 10, 100] : [0, .2, .4, .6];
+    ticks.forEach(t => { el("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: "var(--rule)" }, svg); lbl(svg, m.l - 6, Y(t) + 4, logY ? (t >= 1 ? t : t) : pc(t), "lab m s", "end"); });
+    [40, 45, 50, 55, 60, 65, 70].forEach(la => lbl(svg, X(la - .5), H - m.b + 16, la + "° N", "lab m s", "middle"));
+    el("rect", { x: X(49.5), y: m.t, width: X(59.5) - X(49.5), height: H - m.t - m.b, fill: "var(--hot)", opacity: .07 }, svg);
+    lbl(svg, X(54.5), m.t + 12, "50° to 60° N", "lab s m", "middle");
+    [[key[0], "var(--k-mound)", "All records"], [key[1], "var(--r-1)", "Without register countries"]].forEach(([k, c, name]) => {
+      const pts = rows.filter(r => r[k] != null && (!logY || r[k] > 0)).map(r => [X(r.lat), Y(r[k]), r]);
+      el("path", { d: "M" + pts.map(p => p[0] + " " + p[1]).join("L"), fill: "none", stroke: c, "stroke-width": 2.5, "stroke-linejoin": "round" }, svg);
+      pts.forEach(p => { const dot = el("circle", { cx: p[0], cy: p[1], r: 3.2, fill: c }, svg); hover(dot, `<b>${p[2].lat}° to ${p[2].lat + 1}° N</b><br>${name}: ${logY ? p[2][k].toFixed(2) + " per 1,000 km²" : pc(p[2][k]) + " of squares"}<br>${fmt(p[2].n)} barrows in all`); });
+      if (!nar && pts.length) { const last = pts[pts.length - 1]; } });
+    if (!nar) { lbl(svg, W - m.r + 10, m.t + 20, "All records", "lab s"); el("rect", { x: W - m.r + 10, y: m.t + 26, width: 26, height: 3, fill: "var(--k-mound)" }, svg);
+      lbl(svg, W - m.r + 10, m.t + 50, "Without register", "lab s"); lbl(svg, W - m.r + 10, m.t + 64, "countries", "lab s"); el("rect", { x: W - m.r + 10, y: m.t + 70, width: 26, height: 3, fill: "var(--r-1)" }, svg); }
+    else { const d = document.createElement("div"); d.className = "legend"; d.innerHTML = `<span>${sw("var(--k-mound)")}All records</span><span>${sw("var(--r-1)")}Without register countries</span>`; box.appendChild(d); }
+  }
+})();
+
+/* ===== mound share ===== */
+resp(document.getElementById("stone"), (W, nar) => {
+  const rows = R.countries.filter(c => c.zone === "europe" && c.mound_share_osm != null).sort((a, b) => a.mound_share_osm - b.mound_share_osm);
+  const rowH = 22, m = { l: nar ? 104 : 136, r: 52, t: 24, b: 6 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of mounds among mapped mounds and megaliths by country" }, document.getElementById("stone"));
+  const X = v => m.l + v * (W - m.l - m.r);
+  [0, .25, .5, .75, 1].forEach(v => { el("line", { x1: X(v), x2: X(v), y1: m.t - 4, y2: H - m.b, stroke: "var(--rule)" }, svg); lbl(svg, X(v), m.t - 9, pc(v), "lab m s", "middle"); });
+  lbl(svg, X(0), m.t - 9 - 0, "", "lab");
+  rows.forEach((r, i) => { const y = m.t + i * rowH + rowH / 2;
+    lbl(svg, m.l - 8, y + 4, r.country.replace("United Kingdom", "UK"), "lab s", "end");
+    el("line", { x1: X(0), x2: X(r.mound_share_osm), y1: y, y2: y, stroke: "var(--k-mound)", "stroke-width": 2, opacity: .35 }, svg);
+    el("line", { x1: X(r.mound_share_osm), x2: X(1), y1: y, y2: y, stroke: "var(--k-cairn)", "stroke-width": 2, opacity: .35 }, svg);
+    const c = el("circle", { cx: X(r.mound_share_osm), cy: y, r: 6, fill: "var(--k-mound)", stroke: "var(--card)", "stroke-width": 1.5 }, svg);
+    lbl(svg, W - m.r + 6, y + 4, pc(r.mound_share_osm), "lab s");
+    hover(c, `<b>${r.country}</b><br>${fmt(r.n_osm)} mounds and ${fmt(r.n_megaliths_osm)} megaliths in OpenStreetMap<br>Mounds: ${pc(r.mound_share_osm, 1)}`); });
+});
+
+/* ===== kinds by country ===== */
+resp(document.getElementById("kinds"), (W, nar) => {
+  const KINDS = R.kind_order, rows = R.countries.filter(c => c.n >= 300).sort((a, b) => b.n - a.n), rowH = 26, m = { l: nar ? 104 : 136, r: 60, t: 4, b: 6 }, H = rows.length * rowH + m.t + m.b;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of barrow types by country" }, document.getElementById("kinds"));
+  const X = v => m.l + v * (W - m.l - m.r);
+  rows.forEach((r, i) => { const y = m.t + i * rowH; lbl(svg, m.l - 8, y + 17, r.country.replace("United Kingdom", "UK") + (r.zone === "edge" ? "*" : ""), "lab s", "end"); let a = 0;
+    KINDS.forEach(k => { const v = r["n_" + k] / r.n; if (!v) return; const rect = el("rect", { x: X(a) + .5, y: y + 5, width: Math.max(0, X(a + v) - X(a) - 1), height: rowH - 10, fill: `var(--k-${k})` }, svg);
+      hover(rect, `<b>${r.country}</b>, ${fmt(r.n)} barrows<br>${sw("var(--k-" + k + ")")}${R.kind_label[k]}: ${fmt(r["n_" + k])} (${pc(v, 1)})`); a += v; });
+    lbl(svg, W - m.r + 6, y + 17, fmt(r.n), "lab s m"); });
+  const d = document.createElement("div"); d.className = "legend"; d.innerHTML = KINDS.map(k => `<span>${sw("var(--k-" + k + ")")}${R.kind_label[k]}</span>`).join("") + "<span>* Turkey: neighbour, outside the European totals</span>"; document.getElementById("kinds").appendChild(d);
+});
+
+/* ===== timeline: SPD ridgelines + date ticks ===== */
+(() => { let set = "name"; const box = document.getElementById("time"), bbox = document.getElementById("bins");
+  document.querySelectorAll("[data-set]").forEach(b => b.onclick = () => { set = b.dataset.set; document.querySelectorAll("[data-set]").forEach(x => x.setAttribute("aria-pressed", x === b)); box.innerHTML = ""; render(box.clientWidth, box.clientWidth < 560); bbox.innerHTML = ""; bins(bbox.clientWidth, bbox.clientWidth < 560); });
+  const regs = R.dates.region_order, yrs = R.dates.year_grid;
+  resp(box, (W, nar) => render(W, nar));
+  function render(W, nar) {
+    const rowH = nar ? 92 : 104, m = { l: nar ? 8 : 150, r: 12, t: 18, b: 30 }, H = regs.length * rowH + m.t + m.b;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Summed probability of radiocarbon dates from barrows by region, 6000 BC to AD 1500" }, box);
+    const x0 = -6000, x1 = 1500, X = y => m.l + (y - x0) / (x1 - x0) * (W - m.l - m.r);
+    [[-6000, -2500, "Neolithic and earlier"], [-2500, -800, "Bronze Age"], [-800, 400, "Iron Age"], [400, 1100, "Medieval"]].forEach(([a, b, t], i) => { el("rect", { x: X(a), y: m.t - 14, width: X(b) - X(a), height: H - m.t - m.b + 14, fill: i % 2 ? "var(--panel)" : "transparent", opacity: .7 }, svg); if (!nar) lbl(svg, (X(a) + X(b)) / 2, m.t - 4, t, "lab s m", "middle"); });
+    (nar ? [-6000, -4000, -2000, 1] : [-6000, -5000, -4000, -3000, -2000, -1000, 1, 1000]).forEach(y => { lbl(svg, X(y), H - m.b + 16, y === 1 ? "AD 1" : y < 0 ? (-y) + " BC" : "AD " + y, "lab m s", y === -6000 ? "start" : "middle"); });
+    const D = P ? P.dates : null;
+    regs.forEach((r, i) => { const base = m.t + (i + 1) * rowH - 22, c = `var(--r-${i})`, sp = R.dates.spd[set][r]; const amp = rowH - 34;
+      const pts = yrs.map((y, k) => [X(y), base - sp[k] * amp]).filter(p => p[0] >= m.l && p[0] <= W - m.r);
+      el("path", { d: `M${pts[0][0]} ${base}L` + pts.map(p => p[0] + " " + p[1]).join("L") + `L${pts[pts.length - 1][0]} ${base}Z`, fill: c, opacity: .28 }, svg);
+      el("path", { d: "M" + pts.map(p => p[0] + " " + p[1]).join("L"), fill: "none", stroke: c, "stroke-width": 2 }, svg);
+      el("line", { x1: m.l, x2: W - m.r, y1: base, y2: base, stroke: "var(--fg)", "stroke-width": .8 }, svg);
+      const s = R.dates[set][r]; if (nar) lbl(svg, m.l + 2, base - amp - 2, `${r} · ${s.sites} sites`, "lab s b"); else { lbl(svg, m.l - 10, base - 30, r.replace(" and the steppe", ""), "lab s b", "end"); if (r.includes("steppe")) lbl(svg, m.l - 10, base - 17, "and the steppe", "lab s b", "end"); lbl(svg, m.l - 10, base - 3, `${s.sites} sites, ${s.dates} dates`, "lab s m", "end"); }
+      if (D) for (let k = 0; k < D.y.length; k++) { if (D.r[k] !== i) continue; if (set === "name" && D.l[k] !== 0) continue; if (D.y[k] < x0 || D.y[k] > x1) continue;
+        const t = el("line", { x1: X(D.y[k]), x2: X(D.y[k]), y1: base + 3, y2: base + 13, stroke: c, "stroke-width": 1.4, opacity: .8 }, svg);
+        hover(t, `<b>${esc(D.site[k])}</b>, ${esc(D.cty[k])}<br>${D.lab[k]}: ${fmt(D.age[k])} ± ${D.err[k]} BP<br>Calibrated: ${yr(D.lo[k])} to ${yr(D.hi[k])} (median ${yr(D.y[k])})<br>${D.l[k] ? "Within 100 m of a mapped barrow" : "Site named as a barrow"}`); } });
+  }
+  function bins(W, nar) {
+    const BI = R.dates.bins, rows = [...regs, "All"], rowH = 30, m = { l: nar ? 120 : 190, r: 10, t: 4, b: 6 }, H = rows.length * rowH + m.t + m.b;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of barrow dates by period and region" }, bbox);
+    const cols = ["var(--k-long)", "var(--k-mound)", "var(--k-round)", "var(--k-cairn)", "var(--muted)"];
+    const X = v => m.l + v * (W - m.l - m.r);
+    rows.forEach((r, i) => { const y = m.t + i * rowH, s = R.dates[set][r]; lbl(svg, m.l - 8, y + 19, (nar ? r.replace(" and the steppe", "").replace("West and central", "W & C") : r) + "", "lab s" + (r === "All" ? " b" : ""), "end"); let a = 0;
+      BI.forEach((b, k) => { const v = s.bins[b]; if (!v) return; const rect = el("rect", { x: X(a) + .5, y: y + 6, width: Math.max(0, X(a + v) - X(a) - 1), height: rowH - 12, fill: cols[k] }, svg);
+        if (X(a + v) - X(a) > 34) { const t = el("text", { x: X(a) + 5, y: y + 19, class: "lab s", style: "fill:#fff" }, svg); t.textContent = pc(v); }
+        hover(rect, `<b>${r}</b> (${s.sites} sites)<br>${b}: ${pc(v, 1)} of site-weighted dates`); a += v; }); });
+    const d = document.createElement("div"); d.className = "legend"; d.innerHTML = BI.map((b, k) => `<span>${sw(cols[k])}${b}</span>`).join(""); bbox.appendChild(d);
+  }
+  resp(bbox, (W, nar) => bins(W, nar));
+  window.__retime = () => { box.innerHTML = ""; render(box.clientWidth, box.clientWidth < 560); };
+})();
+
+/* ===== country table ===== */
+(() => { const t = document.getElementById("ctab"); let sortK = "n", dir = -1;
+  const cols = [["country", "Country"], ["n", "Barrows", 1], ["per_1000km2", "Per 1,000 km²", 1], ["n_osm", "OSM", 1], ["n_wikidata", "Wikidata", 1], ["presence_share", "Squares with one", 1], ["mound_share_osm", "Mound share", 1], ["n_kurgan", "Kurgans", 1], ["n_group_records", "Group records", 1]];
+  function draw() { const rows = R.countries.filter(c => c.n > 0).sort((a, b) => { const x = a[sortK], y = b[sortK]; if (typeof x === "string") return dir * x.localeCompare(y); return dir * ((x ?? -1) - (y ?? -1)); });
+    t.innerHTML = `<thead><tr>${cols.map(c => `<th class="${c[2] ? "num" : ""}" data-k="${c[0]}">${c[1]}${sortK === c[0] ? (dir < 0 ? " ▾" : " ▴") : ""}</th>`).join("")}</tr></thead><tbody>` +
+      rows.map(r => `<tr><td>${esc(r.country)}${r.register_fed ? '<span class="tag">register</span>' : ""}${r.zone === "edge" ? '<span class="tag" style="border-color:var(--muted);color:var(--muted)">neighbour</span>' : ""}</td><td class="num">${fmt(r.n)}</td><td class="num">${r.per_1000km2 >= 10 ? fmt(r.per_1000km2) : r.per_1000km2.toFixed(2)}</td><td class="num">${fmt(r.n_osm)}</td><td class="num">${fmt(r.n_wikidata)}</td><td class="num">${r.presence_share != null ? pc(r.presence_share) : ""}</td><td class="num">${r.mound_share_osm != null ? pc(r.mound_share_osm) : ""}</td><td class="num">${r.n_kurgan ? fmt(r.n_kurgan) : ""}</td><td class="num">${r.n_group_records ? fmt(r.n_group_records) : ""}</td></tr>`).join("") + "</tbody>";
+    t.querySelectorAll("th").forEach(th => th.onclick = () => { const k = th.dataset.k; if (k === sortK) dir = -dir; else { sortK = k; dir = k === "country" ? 1 : -1; } draw(); }); }
+  draw(); })();
+</script>
+</body>
+</html>
