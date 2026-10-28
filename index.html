@@ -507,5 +507,6 @@ resp(document.getElementById("kinds"), (W, nar) => {
     t.querySelectorAll("th").forEach(th => th.onclick = () => { const k = th.dataset.k; if (k === sortK) dir = -dir; else { sortK = k; dir = k === "country" ? 1 : -1; } draw(); }); }
   draw(); })();
 </script>
+<script src="https://tristan-hotham.github.io/assets/site-nav.js" defer></script>
 </body>
 </html>
